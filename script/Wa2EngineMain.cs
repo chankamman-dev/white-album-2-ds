@@ -11,6 +11,10 @@ public class BacklogEntry
 	public string Text;
 	public int Segment;
 	public List<VoiceInfo> VoiceInfos = new();
+	// source of the line: script and string-table indices (used for the original-language text)
+	public string ScriptName;
+	public List<int> TextIds = new();
+	public int NameTextId = -1;
 }
 public partial class Wa2EngineMain : Control
 {
@@ -51,6 +55,7 @@ public partial class Wa2EngineMain : Control
 	// public int _frame;
 	// public List<string> Texts = new();
 	public List<BacklogEntry> Backlogs = new();
+	public int CurNameTextId = -1;
 	public bool EroMode = false;
 	// public int BgType = 0;
 	public bool TestMode = true;
@@ -417,7 +422,7 @@ public partial class Wa2EngineMain : Control
 			{
 				if (!(ui as BasePage).AnimationPlayer.IsPlaying())
 				{
-					SoundMgr.PlaySysSe(ResourceLoader.Load<AudioStream>("res://assets/se/SE_9213.wav"));
+					SoundMgr.PlaySysSe(ResourceLoader.Load<AudioStream>("res://assets/se/SE_9213.WAV"));
 					(ui as BasePage).Close();
 				}
 
@@ -429,7 +434,7 @@ public partial class Wa2EngineMain : Control
 					UiMgr.UIConfirm.Close();
 					UiMgr.OpenTitleMenu();
 				});
-				SoundMgr.PlaySysSe(ResourceLoader.Load<AudioStream>("res://assets/se/SE_9213.wav"));
+				SoundMgr.PlaySysSe(ResourceLoader.Load<AudioStream>("res://assets/se/SE_9213.WAV"));
 			}
 		}
 	}

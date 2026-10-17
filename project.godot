@@ -17,6 +17,10 @@ boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/image="uid://bselsbmxrq0g7"
 config/icon="res://icon.svg"
 
+[autoload]
+
+ThorDualScreen="*res://script/thor/ThorDualScreen.cs"
+
 [display]
 
 window/size/viewport_width=1280
@@ -31,7 +35,7 @@ project/assembly_name="wa2"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/wmv_video/plugin.cfg")
+enabled=PackedStringArray("res://addons/wmv_video/plugin.cfg", "res://addons/thor_dualscreen/plugin.cfg")
 
 [input]
 

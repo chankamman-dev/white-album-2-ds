@@ -85,3 +85,6 @@ xcuserdata/
 /assets/fonts/fzzyjt.ttf.import
 /assets/fonts/AlibabaPuHuiTi-3-65-Medium.ttf
 /assets/fonts/AlibabaPuHuiTi-3-65-Medium.ttf.import
+
+# Thor dictionary database (built by addons/thor_dualscreen/tools/build_dict.py)
+/addons/thor_dualscreen/dict/*.db

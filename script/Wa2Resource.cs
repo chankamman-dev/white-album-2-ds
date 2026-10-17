@@ -248,7 +248,12 @@ public class Wa2Resource
 		{
 			return null;
 		}
+		return ReadEntry(entry);
+	}
 
+	/// <summary>Reads (and decompresses) one entry of a pak; also used for paks outside FileDic.</summary>
+	public static byte[] ReadEntry(FileEntry entry)
+	{
 		string fullPath = System.IO.Path.Combine(ProjectSettings.GlobalizePath(ResPath), entry.PkgPath);
 
 		using (System.IO.FileStream fs = new System.IO.FileStream(fullPath, System.IO.FileMode.Open, System.IO.FileAccess.Read))

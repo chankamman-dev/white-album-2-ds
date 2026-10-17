@@ -72,6 +72,43 @@ public partial class Wa2Label : Node2D
 														 // public int ShadowSize = 8; // 阴影大小
 
 	public int Segment = 0;
+	/// <summary>
+	/// Dense furigana layout (used by the Thor lower screen): ruby centred over its base,
+	/// RubyScale of the font size, tag popped after use. The game's own text keeps the original layout.
+	/// </summary>
+	public bool CenterRuby = false;
+	public float RubyScale = 0.5f;
+
+	/// <summary>Draws the ruby that follows '|' at index i; returns the index of the closing '>'.</summary>
+	private int AddCenteredRuby(int i, int baseStart, int drawX, int drawY, int lastDrawX, int progress, int curprogress, int curSegment)
+	{
+		int end = i + 1;
+		while (end < Text.Length && Text[end] != '>')
+		{
+			end++;
+		}
+		int count = end - i - 1;
+		int size = Math.Max(8, (int)(FontSize * RubyScale));
+		int lineY = drawY;
+		int baseEnd = drawX;
+		if (drawX <= baseStart)
+		{
+			// the base ended exactly at a line break: the ruby belongs to the previous line
+			baseEnd = lastDrawX + FontSize;
+			lineY = drawY - FontSize - ParagraphSpacing;
+		}
+		int width = count * size;
+		int x = baseStart + (baseEnd - baseStart - width) / 2;
+		x = Math.Max(x, baseStart - size);
+		int y = lineY - size - 2;
+		for (int k = i + 1; k < end; k++)
+		{
+			int alpha = curSegment >= Segment ? progress - curprogress : 16;
+			_renderDatas.Add(new CharRenderData(Text[k], x, y, size, progress < 0 ? 16 : alpha));
+			x += size;
+		}
+		return end;
+	}
 	public int ProgressStep = 0;
 	private List<CharRenderData> _renderDatas = new();
 	public override void _Ready()
@@ -408,7 +445,11 @@ public partial class Wa2Label : Node2D
 					break;
 				case '|':
 					//标签类型为5时绘制注音字符
-					if (tagList.Count > 0 && tagList.Peek().Type == 5)
+					if (CenterRuby && tagList.Count > 0 && tagList.Peek().Type == 5)
+					{
+						i = AddCenteredRuby(i, tagList.Pop().Value, drawX, drawY, lastDrawX, progress, curprogress, curSegment);
+					}
+					else if (tagList.Count > 0 && tagList.Peek().Type == 5)
 					{
 						int x = tagList.Peek().Value;
 						int y = drawY - 13;

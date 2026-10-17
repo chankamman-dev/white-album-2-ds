@@ -169,16 +169,21 @@ public class Wa2Func
 	}
 	public bool SetMessage(List<Wa2Var> args)
 	{
-		SetMessageEx(args[0].Get(), args[1].Get(), args[2].Get(), 1);
+		SetMessageEx(args[0].Get(), args[1].Get(), args[2].Get(), 1, TextId(args[0]));
 		return false;
 
 	}
 	public bool SetMessageE(List<Wa2Var> args)
 	{
-		SetMessageEx(args[0].Get(), args[1].Get(), args[2].Get(), 2);
+		SetMessageEx(args[0].Get(), args[1].Get(), args[2].Get(), 2, TextId(args[0]));
 		return false;
 	}
-	public void SetMessageEx(string text, int idx, int v3, int v4)
+	/// <summary>String-table index of a text argument (-1 when it is not a table string).</summary>
+	private static int TextId(Wa2Var v)
+	{
+		return v.CmdType == CmdType.STR_VAR ? v.IntValue : -1;
+	}
+	public void SetMessageEx(string text, int idx, int v3, int v4, int textId = -1)
 	{
 		_engine.AdvMain.WaitKey = false;
 		if (v3 == 0)
@@ -208,6 +213,13 @@ public class Wa2Func
 		_engine.Backlogs[^1].Text = _engine.AdvMain.TextLabel.Text;
 		_engine.Backlogs[^1].Segment = _engine.AdvMain.TextLabel.Segment;
 		_engine.Backlogs[^1].VoiceInfos = [.. _engine.VoiceInfos];
+		// remember where the line came from so the original-language table can be looked up
+		_engine.Backlogs[^1].ScriptName = _engine.Script?.ScriptName;
+		_engine.Backlogs[^1].NameTextId = _engine.CurNameTextId;
+		if (textId >= 0)
+		{
+			_engine.Backlogs[^1].TextIds.Add(textId);
+		}
 	}
 	public bool EndMessage(List<Wa2Var> args)
 	{
@@ -225,11 +237,12 @@ public class Wa2Func
 		_engine.VoiceInfos.Clear();
 		_engine.AdvMain.NameLabel.Clear();
 		_engine.AdvMain.NameLabel.Text = "";
+		_engine.CurNameTextId = -1;
 		return true;
 	}
 	public bool SetMessage2(List<Wa2Var> args)
 	{
-		SetMessageEx(args[0].Get(), args[1].Get(), args[2].Get(), 2);
+		SetMessageEx(args[0].Get(), args[1].Get(), args[2].Get(), 2, TextId(args[0]));
 		_engine.SkipDisable = true;
 		return false;
 	}
@@ -330,6 +343,7 @@ public class Wa2Func
 		{
 			_engine.AdvMain.NameLabel.Text = "";
 		}
+		_engine.CurNameTextId = TextId(args[0]);
 		return true;
 	}
 	public bool WNS(List<Wa2Var> args)
@@ -1064,6 +1078,7 @@ public class Wa2Func
 		{
 			_engine.AdvMain.NameLabel.Text = "";
 		}
+		_engine.CurNameTextId = TextId(args[0]);
 		return true;
 
 	}
