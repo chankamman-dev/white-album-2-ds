@@ -1,6 +1,6 @@
-# AYN Thor 双屏适配
+# WHITE ALBUM 2 DS（AYN Thor 双屏适配）
 
-本目录及 `script/thor/` 为 WHITE ALBUM2 Godot 移植版增加 AYN Thor（上下双屏 Android 掌机）支持。上屏照常运行游戏，下屏是一个用游戏自身 UI 素材拼成的伴侣界面。
+WHITE ALBUM 2 DS 是 WHITE ALBUM2 Godot 移植版的双屏分支：本目录及 `script/thor/` 增加 AYN Thor（上下双屏 Android 掌机）支持。上屏照常运行游戏，下屏是一个用游戏自身 UI 素材拼成的伴侣界面。
 
 ## 功能
 
@@ -19,7 +19,7 @@
 - 日文原文：中文补丁保留了原版脚本的字符串表顺序，所以每句中文都能找到 `script.pak` 中对应的日文原句，用游戏的日文字体绘制。
 - 汉字注音：Kuromoji（IPADIC）在设备上分词得到读音，转换成游戏自己的注音标记 `<R漢字|かな>`；原作自带的注音保持不变。
 - 查词：把一句日文拆成实词，显示读音、词性和释义（中文维基词典优先，JMdict 英文补充）。
-- 生词本 → AnkiDroid：通过 AnkiDroid 的 ContentProvider 接口自动创建牌组「WHITE ALBUM2」和模板「WA2 Thor 生词」，卡片包含单词、读音、释义、带注音的例句。第一次发送时需要在上屏弹出的系统窗口里允许访问 AnkiDroid。
+- 生词本 → AnkiDroid：通过 AnkiDroid 的 ContentProvider 接口自动创建牌组「WHITE ALBUM2」和模板「WHITE ALBUM 2 DS 生词」，卡片包含单词、读音、释义、带注音的例句。第一次发送时需要在上屏弹出的系统窗口里允许访问 AnkiDroid。
 - 系统语音：没有配音的句子可用 Android TTS 朗读日文原文（需要系统装有日语语音）。中文无法朗读：补丁把汉字映射到了别的字形槽位。
 
 **手柄**
@@ -47,7 +47,7 @@
    python addons/thor_dualscreen/tools/build_dict.py <源数据目录> addons/thor_dualscreen/dict/thor_dict.db
    ```
    源数据目录需要包含 `JMdict_e.gz`（EDRDG）和 kaikki.org 的中文维基词典日语词条 `zh-ja-1.jsonl`（「日语」）、`zh-ja-2.jsonl`（「日語」）。
-3. 在编辑器里启用插件 `Thor Dual Screen`（project.godot 已启用），安装 Android 构建模板，用导出预设 `thor` 导出（包名 `com.example.wa2.thor`）。
+3. 在编辑器里启用插件 `WHITE ALBUM 2 DS`（project.godot 已启用），安装 Android 构建模板，用导出预设 `wa2ds` 导出（应用名 WHITE ALBUM 2 DS，包名 `com.example.wa2.thor`，沿用以便覆盖安装）。
 
 桌面预览：`godot --path . -- --thor-mock [--thor-jp] [--thor-tab=N] [--thor-words] --thor-shot=out.png` 会把下屏画到一个 PNG。
 

@@ -317,7 +317,7 @@ public class Wa2ThorPlugin extends GodotPlugin {
 	private static final String ANKI_PERMISSION = "com.ichi2.anki.permission.READ_WRITE_DATABASE";
 	private static final String ANKI_AUTHORITY = "content://com.ichi2.anki.flashcards";
 	private static final String ANKI_DECK = "WHITE ALBUM2";
-	private static final String ANKI_MODEL = "WA2 Thor 生词";
+	private static final String ANKI_MODEL = "WHITE ALBUM 2 DS 生词";
 	private static final String[] ANKI_FIELDS = {"Word", "Reading", "Meaning", "Sentence", "Source"};
 	private static final String ANKI_CSS = ".card{font-family:sans-serif;font-size:22px;text-align:center;color:#223;background:#f4f8fb}"
 			+ ".w{font-size:44px;margin:12px}.r{font-size:26px;color:#2a7f9e}.m{margin:12px;font-size:22px}"
