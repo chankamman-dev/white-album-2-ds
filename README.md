@@ -4,11 +4,11 @@
 
 [dorakyuraduang/wa2-godot](https://github.com/dorakyuraduang/wa2-godot)（白色相簿2 Godot4 移植）的 AYN Thor 双屏分支：上屏照常运行游戏，下屏是一块用游戏自身 UI 素材做成的伴侣界面，可以看文本记录和日文原文、给汉字注音、查词，并把生词发送到 AnkiDroid。
 
-<!-- 截图 1：双屏实机（文本记录 + 日文原文 + 注音） -->
-
-<!-- 截图 2：标题画面 + 快捷操作 -->
-
-<!-- 截图 3：剧情中 + 收藏页 -->
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/6c50b2c8-864c-4cc9-af77-41e4dd6b145e" width="32%" alt="AYN Thor 实机：文本记录、日文原文与注音" />
+  <img src="https://github.com/user-attachments/assets/f800ffa4-eea4-4122-adb3-a36c4abc4539" width="32%" alt="标题画面与快捷操作" />
+  <img src="https://github.com/user-attachments/assets/2b4072bc-a662-4dcf-bf45-4a2f76711d87" width="32%" alt="剧情中与收藏页" />
+</p>
 
 ## 功能
 
