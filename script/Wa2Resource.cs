@@ -1,3 +1,5 @@
+// Modified for WHITE ALBUM 2 DS (AYN Thor dual-screen fork) by chankamman-dev, 2026:
+//   ReadEntry split out of LoadFileBuffer so other paks can be read.
 using Godot;
 using System;
 using System.Text;

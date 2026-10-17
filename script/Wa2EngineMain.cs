@@ -1,3 +1,5 @@
+// Modified for WHITE ALBUM 2 DS (AYN Thor dual-screen fork) by chankamman-dev, 2026:
+//   BacklogEntry source fields (ScriptName, TextIds, NameTextId), CurNameTextId, back sound path case fix for Android.
 using Godot;
 using System;
 using System.Collections.Generic;

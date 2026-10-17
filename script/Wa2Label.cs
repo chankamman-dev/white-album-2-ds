@@ -1,3 +1,5 @@
+// Modified for WHITE ALBUM 2 DS (AYN Thor dual-screen fork) by chankamman-dev, 2026:
+//   optional centred ruby layout (CenterRuby, RubyScale) used by the lower screen.
 // using FFmpeg.AutoGen;
 using Godot;
 using System;

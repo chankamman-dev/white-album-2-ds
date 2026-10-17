@@ -1,3 +1,5 @@
+// Modified for WHITE ALBUM 2 DS (AYN Thor dual-screen fork) by chankamman-dev, 2026:
+//   backlog entries record the script name and string-table ids of each line and name.
 // using FFmpeg.AutoGen;
 using Godot;
 using System;
