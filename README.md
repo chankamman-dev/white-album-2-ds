@@ -1,38 +1,89 @@
 **简体中文** | [English](README_EN.md)
 
+<div align="center">
+
 # WHITE ALBUM 2 DS
 
-[dorakyuraduang/wa2-godot](https://github.com/dorakyuraduang/wa2-godot)（白色相簿2 Godot4 移植）的 AYN Thor 双屏分支：上屏照常运行游戏，下屏是一块用游戏自身 UI 素材做成的伴侣界面，可以看文本记录和日文原文、给汉字注音、查词，并把生词发送到 AnkiDroid。
+**白色相簿2 · AYN Thor 双屏版**
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/6c50b2c8-864c-4cc9-af77-41e4dd6b145e" width="32%" alt="AYN Thor 实机：文本记录、日文原文与注音" />
-  <img src="https://github.com/user-attachments/assets/f800ffa4-eea4-4122-adb3-a36c4abc4539" width="32%" alt="标题画面与快捷操作" />
-  <img src="https://github.com/user-attachments/assets/2b4072bc-a662-4dcf-bf45-4a2f76711d87" width="32%" alt="剧情中与收藏页" />
-</p>
+上屏照常游玩，下屏是一块用游戏原版 UI 素材做成的伴侣屏<br>
+文本记录 · 日文原文与假名注音 · 查词 · AnkiDroid 生词本 · 名台词收藏
 
-## 功能
+![AYN Thor](https://img.shields.io/badge/AYN%20Thor-dual%20screen-2aa7b8)
+![Android](https://img.shields.io/badge/Android-arm64-3ddc84?logo=android&logoColor=white)
+![Godot](https://img.shields.io/badge/Godot-4.5%20.NET-478cbf?logo=godotengine&logoColor=white)
+[![Fork](https://img.shields.io/badge/fork%20of-dorakyuraduang%2Fwa2--godot-555)](https://github.com/dorakyuraduang/wa2-godot)
+![License](https://img.shields.io/badge/code-Apache--2.0-blue)
 
-- **文本记录**：最新的台词在最上面，正在显示的一句不重复列出；点语音图标重播原声，没有配音的句子可以用系统语音朗读日文原文。
-- **日文原文与注音**：每句中文都能找到原版脚本里对应的日文原句，用游戏的日文字体显示；汉字可以自动标注假名，原作自带的注音保持不变。
-- **查词与生词本**：点一句台词，把日文拆成单词，显示读音、词性和释义（中文维基词典优先，JMdict 英文补充）；可加入生词本，或一键发送到 AnkiDroid，卡片带注音例句。
-- **名台词收藏**：在文本记录里长按一句即可收藏，收藏页可以重听语音。
-- **快捷操作**：存档、读档、快速存档、快速读档、设置、自动、快进等；出现选项时自动切到这一页，可以直接点选。
-- **手柄**：剧情中 A 推进、B 返回、X 自动、Y 隐藏文本、按住 R1 快进、L1 切换下屏页面；标题和各菜单页用十字键或左摇杆选择、A 确定、B 返回。
-- 底栏和游戏内各页面一样显示当前 BGM，音量条随音乐跳动。
+<br>
 
-## 安装
+<img src="https://github.com/user-attachments/assets/6c50b2c8-864c-4cc9-af77-41e4dd6b145e" width="62%" alt="AYN Thor 实机：文本记录、日文原文与注音" />
+
+<sub>AYN Thor 实机：下屏是文本记录，当前这一句的日文原文固定在最上方，汉字自动标注假名</sub>
+
+<br><br>
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="https://github.com/user-attachments/assets/f800ffa4-eea4-4122-adb3-a36c4abc4539" alt="标题画面与快捷操作" /><br>
+      <sub>标题画面 · 快捷操作</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="https://github.com/user-attachments/assets/2b4072bc-a662-4dcf-bf45-4a2f76711d87" alt="剧情中与收藏页" /><br>
+      <sub>剧情中 · 收藏页</sub>
+    </td>
+  </tr>
+</table>
+
+</div>
+
+基于 [dorakyuraduang/wa2-godot](https://github.com/dorakyuraduang/wa2-godot)（白色相簿2 Godot4 移植）。下屏界面全部用游戏自身的页眉、文本记录栏、滚动条、按钮和 Leaf 底栏拼成，看起来就像游戏里多出来的一页。
+
+## ✨ 下屏页面
+
+| 页面 | 能做什么 |
+| --- | --- |
+| 📜 **文本记录** | 最新的台词在最上面，正在显示的一句不重复列出。点语音图标重播原声；点一句台词查词，长按收藏。 |
+| ⭐ **收藏** | 「名台词」收藏的句子（中文、日文原文、语音）；「生词本」查词时加入的单词，可发送到 AnkiDroid。 |
+| 🎮 **快捷操作** | 存档、读档、快速存档、快速读档、设置、自动、快进、隐藏文本、返回、回到标题；出现选项时自动切到这一页，可以直接点选。 |
+| 📖 **操作说明** | 操作说明和设置：文字大小、日文原文、汉字注音、系统语音自动朗读。 |
+
+底栏和游戏内各页面一样显示当前 BGM，音量条随音乐跳动。
+
+## 🇯🇵 用白色相簿2学日语
+
+- **日文原文**：中文补丁保留了原版脚本的顺序，每句中文都能找到对应的日文原句，用游戏自己的日文字体显示。
+- **假名注音**：在设备上分词标注读音，写成游戏自己的注音格式；原作自带的注音保持不变。
+- **查词**：把一句日文拆成单词，显示读音、词性和释义（中文维基词典优先，JMdict 英文补充），离线可用。
+- **AnkiDroid 生词本**：一键生成卡片，带释义和注音例句，自动建好牌组「WHITE ALBUM2」。
+- **系统语音**：没有配音的旁白和台词可以用 Android 系统语音朗读日文原文。
+
+## 🎮 手柄
+
+| 场景 | 操作 |
+| --- | --- |
+| 剧情中 | **A** 推进　**B** 返回　**X** 自动　**Y** 隐藏文本　按住 **R1** 快进　**L1** 切换下屏页面　**十字键上下** 滚动文本记录 |
+| 标题与菜单 | **十字键 / 左摇杆** 在按钮间移动　**A** 确定　**B** 返回 |
+
+触屏操作照常可用，上下屏都能点。
+
+## 📦 安装
 
 1. 安装 `WHITE ALBUM 2 DS` 的 APK（包名 `com.example.wa2.thor`，可以和原版移植 APK 同时安装）。
-2. 游戏数据与原版移植相同：把自己的 PC 版游戏文件夹复制到存储根目录，并命名为 `Wa2Res`（见下方原说明）。日文原文功能需要 `Wa2Res` 里有原版的 `script.pak`。
-3. 首次启动时授予文件访问权限。第一次把单词发送到 AnkiDroid 时，需要在上屏弹出的系统窗口里允许访问 AnkiDroid。
+2. 游戏数据与原版移植相同：把自己的 PC 版游戏文件夹复制到存储根目录，命名为 `Wa2Res`（见下方上游说明）。日文原文需要 `Wa2Res` 里有原版的 `script.pak`。
+3. 首次启动时授予文件访问权限。第一次发送到 AnkiDroid 时，在上屏弹出的系统窗口里允许访问即可。
 
-设置（文字大小、日文原文、汉字注音、系统语音自动朗读）在下屏「操作说明」页。实现细节、构建方法和第三方数据许可见 [addons/thor_dualscreen/README.md](addons/thor_dualscreen/README.md)。
+## 🔧 构建与实现
 
-本分支只在 AYN Thor 上测试过。原作数据和权利不随本仓库提供，请使用自己的合法副本。
+实现细节、构建步骤（含离线词典的生成方法）和第三方数据许可见 [addons/thor_dualscreen/README.md](addons/thor_dualscreen/README.md)。本分支只在 AYN Thor 上测试过。
 
----
+## 📄 许可
 
-以下为上游原说明。
+移植代码按上游的约定以 Apache-2.0 开放（见 [LICENSE](LICENSE)、[NOTICE](NOTICE)、[PORTING_CODE.md](PORTING_CODE.md)），本分支修改过的上游文件都在文件开头注明了改动。查词数据来自 JMdict（EDRDG）和中文维基词典，按 CC BY-SA 使用，不随仓库分发。《WHITE ALBUM2》的原始数据和权利不随本仓库提供，请使用自己的合法副本，详见 [ASSET_POLICY.md](ASSET_POLICY.md)。
+
+<details>
+<summary><b>上游原说明（dorakyuraduang/wa2-godot）</b></summary>
 
 【游戏安装方法】  
 1.安装程序： 下载并安装 APK 文件。   
@@ -109,3 +160,5 @@ bash addons/wmv_video/tools/build.sh --platform ios
 依赖目录、FFmpeg SDK 布局、可选参数和 LGPL 注意事项见 [中文构建说明](addons/wmv_video/BUILDING.zh-CN.md) 与 [完整构建说明](addons/wmv_video/BUILDING.md)。当前只有 Windows x86_64 和 Android ARM64 生成过二进制；Android 已验证 APK 打包但尚未记录真机测试，Linux、macOS、iOS 和 Android x86_64 仍属于构建配置，移植者需要在对应系统上自行编译和测试。
 
 移植者可以更改项目名称、界面和实现，也可以建立独立仓库，但 Apache-2.0 只覆盖授权清单中的原创移植代码。`addons/wmv_video` 继续使用其目录内的 MIT License；FFmpeg、godot-cpp、YamlDotNet 等第三方组件继续遵守各自许可证；`assets/sub.yaml` 需要单独处理其第三方来源和非商业/未知授权部分；原作资源和权利不随本仓库代码一起授权。
+
+</details>
