@@ -93,6 +93,7 @@ public partial class ThorBottomUi : Control
 	private StyleBoxFlat _sectionPanel;
 	private SystemFont _sans;
 	private SystemFont _serifItalic;
+	private SystemFont _sansJp;
 
 	private Control _logPage;
 	private Control _actionsPage;
@@ -148,6 +149,8 @@ public partial class ThorBottomUi : Control
 		_jpFont = ResourceLoader.Load<Texture2D>("res://assets/fonts/jp/本体80.png");
 		_jpShadow = ResourceLoader.Load<Texture2D>("res://assets/fonts/jp/袋影80.png");
 		_sans = new SystemFont { FontNames = new[] { "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "sans-serif" } };
+		// dictionary headwords: Japanese glyph shapes, and kanji the game's JP atlas gets wrong (此処)
+		_sansJp = new SystemFont { FontNames = new[] { "Noto Sans CJK JP", "Noto Sans JP", "Source Han Sans JP", "Yu Gothic UI", "Meiryo", "sans-serif" } };
 		_serifItalic = new SystemFont { FontNames = new[] { "Noto Serif", "Times New Roman", "serif" }, FontItalic = true, FontWeight = 600 };
 
 		_glassPanel = new StyleBoxTexture { Texture = Grp("sys_00100"), RegionRect = GlassPanelSrc };
@@ -867,7 +870,7 @@ public partial class ThorBottomUi : Control
 
 	private static readonly string[,] HelpText =
 	{
-		{ "操作", "CONTROLS", "上屏：点击推进文本，在游戏设置里打开后长按可快进\n菜单和标题：十字键／左摇杆选择　A 确定　B 返回\n剧情中：A 推进　X 自动　Y 隐藏文本　按住 R1 快进\nL1 切换下屏页面　十字键上下 滚动文本记录" },
+		{ "操作", "CONTROLS", "上屏：点击推进文本，在游戏设置里打开后长按可快进\n菜单和标题：十字键／左摇杆选择　A 确定　B 返回\n剧情中：A 推进　X 自动　Y 隐藏文本　按住 R1 快进\nL1 切换下屏页面　十字键上下 滚动文本记录\n查词时：十字键左右 上一句／下一句　B 关闭" },
 		{ "文本记录", "BACKLOG", "最新的台词在最上面，点语音图标重播语音。\n没有配音的句子显示青色图标，点击用系统语音朗读日文原文。" },
 		{ "快捷操作", "COMMAND", "存档、读档、设置、自动、快进等按钮。\n出现选项时会自动切到这一页，可以直接点选。" },
 	};
@@ -934,8 +937,9 @@ public partial class ThorBottomUi : Control
 	{
 		_hits.Clear();
 		float w = Size.X;
-		_logPage.Visible = _tab == Tab.Log;
-		_favPage.Visible = _tab == Tab.Fav;
+		// the word popup covers the page; the game-font labels would otherwise show through it
+		_logPage.Visible = _tab == Tab.Log && !_popupOpen;
+		_favPage.Visible = _tab == Tab.Fav && !_popupOpen;
 		_actionsPage.Visible = _tab == Tab.Actions;
 		_helpPage.Visible = _tab == Tab.Help;
 		foreach (Control page in new[] { _logPage, _favPage, _actionsPage, _helpPage })
@@ -993,8 +997,8 @@ public partial class ThorBottomUi : Control
 				if (_log.ToOwner(new Rect2(VoiceLeft + 60f, row.Y - 8f, RowRight - VoiceLeft - 60f, row.H + 16f)) is { } rowRect)
 				{
 					BacklogEntry entry = row.Entry;
-					string jpLine = ThorJapanese.Line(entry);
-					_hits.Add(new Hit(rowRect, RowId(row), () => OpenPopup(jpLine), !string.IsNullOrEmpty(jpLine) && ThorDictionary.Plugin != null,
+					bool lookup = !string.IsNullOrEmpty(ThorJapanese.Line(entry)) && (ThorDictionary.Plugin != null || ThorDictionary.Mock);
+					_hits.Add(new Hit(rowRect, RowId(row), () => OpenPopup(entry), lookup,
 						() => Toast(ThorStore.ToggleFavorite(entry) ? "已收藏这句台词" : "已取消收藏")));
 				}
 				bool speech = !row.HasVoice && row.Speech != null;
@@ -1352,6 +1356,14 @@ public partial class ThorBottomUi : Control
 			plain.CustomMinimumSize = new Vector2(wrapWidth, 0);
 		}
 		return plain;
+	}
+
+	/// <summary>Japanese in a system font (dictionary words, names), shaped as Japanese.</summary>
+	private Label MakeJpText(string text, int size, Color color, int wrapWidth = 0)
+	{
+		Label label = MakeText(text, size, color, wrapWidth, _sansJp);
+		label.Language = "ja";
+		return label;
 	}
 
 	private static Vector2 TextSize(CanvasItem item)

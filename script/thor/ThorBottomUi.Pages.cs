@@ -34,6 +34,7 @@ public partial class ThorBottomUi
 		public Rect2? Tap;
 		public string TapId;
 		public Action TapAct;
+		public readonly List<Rect2> Tags = new();
 	}
 
 	private Control _favPage;
@@ -49,12 +50,21 @@ public partial class ThorBottomUi
 	private readonly List<SimpleRow> _popupRows = new();
 	private bool _popupOpen;
 	private string _popupSentence = "";
+	private BacklogEntry _popupEntry;
+	private readonly HashSet<string> _popupExpanded = new();
 	private bool _popupLoaded;
 	private double _popupRetry;
 
 	private string _toast = "";
 	private ulong _toastUntil;
 	private Texture2D _texLogo;
+	private readonly StyleBoxFlat _tagBox = new()
+	{
+		BgColor = new Color(0.42f, 0.86f, 0.9f, 0.08f), BorderColor = new Color(0.42f, 0.86f, 0.9f, 0.55f),
+		BorderWidthLeft = 1, BorderWidthTop = 1, BorderWidthRight = 1, BorderWidthBottom = 1,
+		CornerRadiusTopLeft = 8, CornerRadiusTopRight = 8, CornerRadiusBottomLeft = 8, CornerRadiusBottomRight = 8,
+		AntiAliasing = true,
+	};
 
 	private const float FavListTop = ContentTop + 84f;
 
@@ -78,9 +88,10 @@ public partial class ThorBottomUi
 		_popup.AddChild(_popupList);
 		_popupList.Content.Draw += () => DrawSimpleRows(_popupList, _popupRows);
 		AddText("popup.title", "查词", 32, TextWhite, _popup);
-		AddText("popup.credit", "词典：JMdict（EDRDG）、中文维基词典 · CC BY-SA", 20, TextSoft, _popup);
-		AddText("popup.close", "关闭", 30, TextWhite, _popup);
-		AddText("popup.wait", "正在加载词典……", 30, TextSoft, _popup);
+		AddText("popup.prev", "上一句", 28, TextWhite, _popup);
+		AddText("popup.next", "下一句", 28, TextWhite, _popup);
+		AddText("popup.close", "关闭", 28, TextWhite, _popup);
+		AddText("popup.wait", "正在加载词典...", 30, TextSoft, _popup);
 		_popup.Visible = false;
 		ThorStore.Load();
 		if (MockWords)
@@ -184,26 +195,6 @@ public partial class ThorBottomUi
 		return node;
 	}
 
-	/// <summary>A Japanese label in the game font, or the system font when a glyph is missing from it.</summary>
-	private CanvasItem JpWord(ThorScrollList list, string text, int size, Color color)
-	{
-		bool covered = text.All(c => Wa2Def.FontMap.ContainsKey(c));
-		if (!covered)
-		{
-			Label l = MakeText(text, size, color);
-			list.Content.AddChild(l);
-			return l;
-		}
-		var label = new Wa2Label { FontSize = size, MaxChars = 999, ParagraphSpacing = 8, LineSpacing = 0, Color = color };
-		list.Content.AddChild(label);
-		label.FontTexture = _jpFont;
-		label.ShadowTexture = _jpShadow;
-		label.Segment = -1;
-		label.SetText(text);
-		label.SetMeta("thor_size", size);
-		return label;
-	}
-
 	private float JpBlock(ThorScrollList list, SimpleRow row, string jp, float y, int size, Color color, float left, float right)
 	{
 		bool ruby = _showRuby && ThorFurigana.Usable && ThorFurigana.Ready;
@@ -259,6 +250,10 @@ public partial class ThorBottomUi
 			if (row.Tap is { } tap && _pressed == row.TapId)
 			{
 				c.DrawRect(tap, new Color(Teal, 0.12f));
+			}
+			foreach (Rect2 tag in row.Tags)
+			{
+				_tagBox.Draw(c.GetCanvasItem(), tag);
 			}
 			if (row.Icon is { } icon)
 			{
@@ -381,7 +376,7 @@ public partial class ThorBottomUi
 	private float WordRow(ThorScrollList list, SimpleRow row, float y, string head, string reading, string pos, string meaning, string sentence, float right)
 	{
 		float cy = y + 20f;
-		CanvasItem h = AddNode(list, row, JpWord(list, head, 44, TextWhite), new Vector2(40f, cy));
+		CanvasItem h = AddNode(list, row, MakeJpText(head, 44, TextWhite), new Vector2(40f, cy - 4f));
 		float hx = 40f + TextSize(h).X + 18f;
 		Rect2 headRect = new(30f, cy - 6f, hx - 30f, 56f);
 		row.Tap = headRect;
@@ -390,7 +385,7 @@ public partial class ThorBottomUi
 		row.TapAct = () => ThorSpeech.Speak(say);
 		if (!string.IsNullOrEmpty(reading) && reading != head)
 		{
-			AddNode(list, row, MakeText(reading, 28, Teal), new Vector2(hx, cy + 10f));
+			AddNode(list, row, MakeJpText(reading, 28, Teal), new Vector2(hx, cy + 10f));
 			hx += TextSize(row.Nodes[^1]).X + 16f;
 		}
 		if (!string.IsNullOrEmpty(pos))
@@ -498,21 +493,29 @@ public partial class ThorBottomUi
 	// ---- 查词 popup ---------------------------------------------------------------
 
 	private Rect2 PopupRect => new(16f, ContentTop + 6f, Size.X - 32f, Size.Y - FooterH - ContentTop - 14f);
-	private Rect2 PopupCloseRect => new(PopupRect.End.X - 24f - 140f, PopupRect.Position.Y + 16f, 140f, 48f);
+	private Rect2 PopupCloseRect => new(PopupRect.End.X - 24f - 130f, PopupRect.Position.Y + 16f, 130f, 48f);
+	private Rect2 PopupNextRect => new(PopupCloseRect.Position.X - 24f - 150f, PopupCloseRect.Position.Y, 150f, 48f);
+	private Rect2 PopupPrevRect => new(PopupNextRect.Position.X - 14f - 150f, PopupCloseRect.Position.Y, 150f, 48f);
 	private Rect2 PopupUpRect => new(PopupRect.End.X - 64f, PopupRect.Position.Y + 80f, 48f, 72f);
 	private Rect2 PopupDownRect => new(PopupRect.End.X - 64f, PopupRect.End.Y - 84f, 48f, 72f);
+	private const float PopupLeft = 92f;
 
-	/// <summary>Opens the word breakdown for a Japanese line.</summary>
-	private void OpenPopup(string jp)
+	public bool PopupOpen => _popupOpen;
+
+	/// <summary>Opens the word breakdown for a backlog line's Japanese original.</summary>
+	private void OpenPopup(BacklogEntry entry)
 	{
+		string jp = entry == null ? null : ThorJapanese.Line(entry);
 		if (string.IsNullOrEmpty(jp))
 		{
 			return;
 		}
+		_popupEntry = entry;
 		_popupSentence = jp;
 		_popupOpen = true;
 		_popupLoaded = false;
 		_popupRetry = 0;
+		_popupExpanded.Clear();
 		ClearRows(_popupRows);
 		_popupList.ContentHeight = 0;
 		_popupList.SetScroll(0);
@@ -526,9 +529,42 @@ public partial class ThorBottomUi
 			return false;
 		}
 		_popupOpen = false;
+		_popupEntry = null;
 		ClearRows(_popupRows);
 		Dirty = true;
 		return true;
+	}
+
+	/// <summary>The nearest older (-1) or newer (+1) backlog line that has a Japanese original.</summary>
+	private BacklogEntry PopupNeighbour(int dir)
+	{
+		List<BacklogEntry> logs = E.Backlogs;
+		for (int i = logs.IndexOf(_popupEntry) + dir; i >= 0 && i < logs.Count; i += dir)
+		{
+			if (!string.IsNullOrEmpty(ThorJapanese.Line(logs[i])))
+			{
+				return logs[i];
+			}
+		}
+		return null;
+	}
+
+	/// <summary>Steps the popup to the previous (-1) or next (+1) line.</summary>
+	public void PopupStep(int dir)
+	{
+		if (_popupOpen && PopupNeighbour(dir) is { } next)
+		{
+			OpenPopup(next);
+		}
+	}
+
+	public void MockOpenPopup()
+	{
+		List<BacklogEntry> logs = E.Backlogs;
+		if (logs.Count > 2)
+		{
+			OpenPopup(logs[2]);
+		}
 	}
 
 	private void LoadPopup()
@@ -541,51 +577,216 @@ public partial class ThorBottomUi
 		ClearRows(_popupRows);
 		float right = PopupRect.Size.X - 90f;
 		float y = 6f;
-		// the sentence itself, with furigana
-		var head = new SimpleRow { Y = y };
-		float sh = JpBlock(_popupList, head, _popupSentence, y + 18f, 32, TextWhite, 40f, right);
-		head.H = sh + 36f;
-		head.Tap = new Rect2(20f, y, right, head.H);
-		head.TapId = "say.sentence";
-		head.TapAct = () => ThorSpeech.Speak(_popupSentence);
-		_popupRows.Add(head);
-		y += head.H + 14f;
-		foreach (DictWord w in ThorDictionary.Breakdown(_popupSentence))
+		y = SentenceCard(y, right) + 14f;
+		List<DictWord> words = ThorDictionary.Breakdown(_popupSentence);
+		foreach (DictWord w in words)
 		{
-			var row = new SimpleRow { Y = y };
-			DictWord word = w;
-			y = WordRow(_popupList, row, y, word.Head, word.Reading, word.Pos, word.Meaning, null, right);
-			float by = y - 62f;
-			WordItem saved = ThorStore.FindWord(word.Head);
-			string key = "pw." + RuntimeHelpers.GetHashCode(row);
-			ListButton add = RowButton(_popupList, row, key + ".add", saved != null ? "已加入生词本" : "加入生词本", right, by, () =>
+			y = PopupWordRow(w, y, right) + 12f;
+		}
+		var foot = new SimpleRow { Y = y };
+		string note = words.Count == 0 ? "这句没有可查的词" : "点词条展开全部释义   词典数据 JMdict (EDRDG) / 中文维基词典, CC BY-SA";
+		Label credit = MakeText(note, 20, new Color(TextSoft, 0.7f), (int)(right - 40f));
+		_popupList.Content.AddChild(credit);
+		AddNode(_popupList, foot, credit, new Vector2(30f, y + 6f));
+		foot.H = 0;
+		_popupRows.Add(foot);
+		_popupList.ContentHeight = y + TextSize(credit).Y + 20f;
+		_popupList.SetScroll(_popupList.Scroll);		Dirty = true;
+	}
+
+	/// <summary>The line being looked up: speaker, Japanese with furigana, and the Chinese translation.</summary>
+	private float SentenceCard(float y, float right)
+	{
+		BacklogEntry entry = _popupEntry;
+		var row = new SimpleRow { Y = y };
+		float cy = y + 18f;
+		Action say = null;
+		bool voiced = entry.VoiceInfos != null && entry.VoiceInfos.Count > 0 && E.Prefs.CanPlayCharVoice(entry.VoiceInfos[0].Chr);
+		if (voiced)
+		{
+			List<VoiceInfo> infos = entry.VoiceInfos;
+			say = () => PlayVoices(infos);
+		}
+		else if (SpeechAvailable)
+		{
+			string text = _popupSentence;
+			say = () => ThorSpeech.Speak(text);
+			row.IconSpeech = true;
+		}
+		string name = ThorJapanese.Name(entry);
+		if (!string.IsNullOrWhiteSpace(name))
+		{
+			AddNode(_popupList, row, MakeJpText(name, 26, TextSoft), new Vector2(PopupLeft, cy));
+			cy += 40f;
+		}
+		if (say != null)
+		{
+			// level with the first line of text, below its furigana
+			float pad = _showRuby && ThorFurigana.Usable && ThorFurigana.Ready ? 34 * RubyScale + 4f : 0f;
+			row.Icon = new Rect2(26f, cy + pad - 6f, 48f, 48f);
+			row.IconId = "pop.say";
+			row.IconAct = say;
+		}
+		cy += JpBlock(_popupList, row, _popupSentence, cy, 34, TextWhite, PopupLeft, right);
+		if (!string.IsNullOrEmpty(entry.Text))
+		{
+			const int size = 26;
+			const int paragraph = 10;
+			var cn = new Wa2Label
 			{
-				ThorStore.AddWord(new WordItem
-				{
-					Word = word.Head, Reading = word.Reading, Pos = word.Pos,
-					Meaning = string.IsNullOrEmpty(word.Zh) ? word.En : word.Zh + (string.IsNullOrEmpty(word.En) ? "" : "\n" + word.En),
-					Sentence = _popupSentence,
-				});
+				FontSize = size, MaxChars = Math.Max(8, (int)((right - PopupLeft) / size)),
+				ParagraphSpacing = paragraph, LineSpacing = 0, Color = TextSoft,
+			};
+			_popupList.Content.AddChild(cn);
+			cn.Segment = entry.Segment;
+			TextParseResult r = cn.SetText(entry.Text);
+			cy += 16f;
+			AddNode(_popupList, row, cn, new Vector2(PopupLeft, cy));
+			cy += ((int)Mathf.Round(r.EndPosition.Y / (size + paragraph)) + 1) * (size + paragraph) - paragraph;
+		}
+		row.H = cy + 22f - y;
+		if (say != null)
+		{
+			row.Tap = new Rect2(20f, y, right, row.H);
+			row.TapId = "pop.sentence";
+			row.TapAct = say;
+		}
+		_popupRows.Add(row);
+		return y + row.H;
+	}
+
+	/// <summary>
+	/// One word: headword, reading, part of speech and the form used in the line on the first line,
+	/// the meaning below. Tapping the row shows every gloss and the other entries of that spelling.
+	/// </summary>
+	private float PopupWordRow(DictWord word, float y, float right)
+	{
+		var row = new SimpleRow { Y = y };
+		string key = "pw." + word.Head + "." + word.Reading;
+		bool open = _popupExpanded.Contains(key);
+		float cy = y + 18f;
+		string say = string.IsNullOrEmpty(word.Reading) ? word.Head : word.Reading;
+		if (SpeechAvailable)
+		{
+			row.Icon = new Rect2(28f, cy + 2f, 44f, 44f);
+			row.IconSpeech = true;
+			row.IconId = key + ".say";
+			row.IconAct = () => ThorSpeech.Speak(say);
+		}
+		Label head = MakeJpText(word.Head, 40, TextWhite);
+		AddNode(_popupList, row, head, new Vector2(PopupLeft, cy - 4f));
+		float hx = PopupLeft + TextSize(head).X + 16f;
+		if (!string.IsNullOrEmpty(word.Reading) && word.Reading != word.Head)
+		{
+			Label reading = MakeJpText(word.Reading, 26, Teal);
+			AddNode(_popupList, row, reading, new Vector2(hx, cy + 10f));
+			hx += TextSize(reading).X + 16f;
+		}
+		if (!string.IsNullOrEmpty(word.Pos))
+		{
+			Label tag = MakeText(word.Pos, 20, TextSoft);
+			Vector2 ts = TextSize(tag);
+			var tagRect = new Rect2(hx, cy + 10f, ts.X + 20f, 32f);
+			row.Tags.Add(tagRect);
+			AddNode(_popupList, row, tag, tagRect.Position + (tagRect.Size - ts) / 2f);
+			hx = tagRect.End.X + 14f;
+		}
+		if (word.Surface != word.Head && word.Surface != word.Reading)
+		{
+			AddNode(_popupList, row, MakeJpText("句中「" + word.Surface + "」", 22, new Color(TextSoft, 0.8f)), new Vector2(hx, cy + 13f));
+		}
+		if (!word.IsName)
+		{
+			WordItem saved = ThorStore.FindWord(word.Head);
+			ListButton add = RowButton(_popupList, row, key + ".add", saved != null ? "已在生词本" : "加入生词本", right, cy, () =>
+			{
+				ThorStore.AddWord(ToWordItem(word));
 				Toast("已加入生词本");
 				_popupLoaded = false;
 			}, saved != null);
-			RowButton(_popupList, row, key + ".anki", "发送到 Anki", add.Rect.Position.X - 14f, by, () =>
+			RowButton(_popupList, row, key + ".anki", "Anki", add.Rect.Position.X - 12f, cy, () =>
 			{
-				WordItem item = ThorStore.AddWord(new WordItem
-				{
-					Word = word.Head, Reading = word.Reading, Pos = word.Pos,
-					Meaning = string.IsNullOrEmpty(word.Zh) ? word.En : word.Zh + (string.IsNullOrEmpty(word.En) ? "" : "\n" + word.En),
-					Sentence = _popupSentence,
-				});
-				SendAnki(item);
+				SendAnki(ThorStore.AddWord(ToWordItem(word)));
 				_popupLoaded = false;
-			});
-			_popupRows.Add(row);
-			y += 14f;
+			}, saved?.Anki == true);
 		}
-		_popupList.ContentHeight = y;
-		_popupList.SetScroll(_popupList.Scroll);
-		Dirty = true;
+		cy += 62f;
+
+		int wrap = (int)(right - PopupLeft);
+		bool more = word.Alts.Count > 0;
+		string main = string.IsNullOrEmpty(word.Meaning) ? "（词典里没有这个词）" : word.Meaning;
+		Label m = MakeText(main, 28, TextWhite, wrap);
+		_popupList.Content.AddChild(m);
+		AddNode(_popupList, row, m, new Vector2(PopupLeft, cy));
+		int lines = Math.Max(1, m.GetLineCount());
+		if (!open && lines > 2)
+		{
+			m.MaxLinesVisible = 2;
+			more = true;
+		}
+		cy += Mathf.Min(lines, open ? lines : 2) * 40f + 4f;
+		// English under the Chinese gloss
+		if (!string.IsNullOrEmpty(word.Zh) && !string.IsNullOrEmpty(word.En))
+		{
+			Label en = MakeText(word.En, 24, TextSoft, wrap);
+			_popupList.Content.AddChild(en);
+			AddNode(_popupList, row, en, new Vector2(PopupLeft, cy + 2f));
+			int enLines = Math.Max(1, en.GetLineCount());
+			if (!open && enLines > 1)
+			{
+				en.MaxLinesVisible = 1;
+				more = true;
+			}
+			cy += Mathf.Min(enLines, open ? enLines : 1) * 34f + 6f;
+		}
+		if (open)
+		{
+			foreach (DictSense alt in word.Alts)
+			{
+				cy += 10f;
+				string altHead = alt.Head + (string.IsNullOrEmpty(alt.Reading) || alt.Reading == alt.Head ? "" : "【" + alt.Reading + "】");
+				Label ah = MakeJpText(altHead + "  " + alt.Pos, 24, Teal);
+				AddNode(_popupList, row, ah, new Vector2(PopupLeft, cy));
+				cy += 36f;
+				Label am = MakeText(alt.Meaning, 24, TextSoft, wrap);
+				_popupList.Content.AddChild(am);
+				AddNode(_popupList, row, am, new Vector2(PopupLeft, cy));
+				cy += Math.Max(1, am.GetLineCount()) * 34f;
+			}
+		}
+		if (more || open)
+		{
+			Label toggle = MakeText(open ? "收起" : "展开", 22, Teal);
+			Vector2 ts = TextSize(toggle);
+			AddNode(_popupList, row, toggle, new Vector2(right - ts.X - 24f, cy - 2f));
+			cy += ts.Y;
+		}
+		row.H = cy + 16f - y;
+		if (more || open)
+		{
+			row.Tap = new Rect2(20f, y, right, row.H);
+			row.TapId = key + ".open";
+			row.TapAct = () =>
+			{
+				if (!_popupExpanded.Remove(key))
+				{
+					_popupExpanded.Add(key);
+				}
+				_popupLoaded = false;
+			};
+		}
+		_popupRows.Add(row);
+		return y + row.H;
+	}
+
+	private WordItem ToWordItem(DictWord word)
+	{
+		return new WordItem
+		{
+			Word = word.Head, Reading = word.Reading, Pos = word.Pos,
+			Meaning = string.IsNullOrEmpty(word.Zh) ? word.En : word.Zh + (string.IsNullOrEmpty(word.En) ? "" : "\n" + word.En),
+			Sentence = _popupSentence,
+		};
 	}
 
 	private void RelayoutPopup()
@@ -597,12 +798,19 @@ public partial class ThorBottomUi
 		}
 		_popup.Size = Size;
 		Rect2 p = PopupRect;
-		SetPos(_texts["popup.title"], new Vector2(p.Position.X + 30f, p.Position.Y + 22f));
-		SetPos(_texts["popup.credit"], new Vector2(p.Position.X + 110f, p.Position.Y + 34f));
+		SetPos(_texts["popup.title"], new Vector2(p.Position.X + 34f, p.Position.Y + 22f));
 		CenterText("popup.close", PopupCloseRect);
+		CenterText("popup.prev", PopupPrevRect);
+		CenterText("popup.next", PopupNextRect);
+		bool hasPrev = PopupNeighbour(-1) != null;
+		bool hasNext = PopupNeighbour(1) != null;
+		_texts["popup.prev"].Modulate = hasPrev ? TextWhite : new Color(1, 1, 1, 0.4f);
+		_texts["popup.next"].Modulate = hasNext ? TextWhite : new Color(1, 1, 1, 0.4f);
 		_texts["popup.wait"].Visible = !_popupLoaded;
 		SetPos(_texts["popup.wait"], new Vector2(p.Position.X + 40f, p.Position.Y + 110f));
 		_hits.Add(new Hit(PopupCloseRect.Grow(8f), "popup.close", () => ClosePopup(), true));
+		_hits.Add(new Hit(PopupPrevRect.Grow(6f), "popup.prev", () => PopupStep(-1), hasPrev));
+		_hits.Add(new Hit(PopupNextRect.Grow(6f), "popup.next", () => PopupStep(1), hasNext));
 		_popupList.Layout(new Rect2(p.Position.X + 6f, p.Position.Y + 80f, p.Size.X - 80f, p.Size.Y - 90f));
 		if (_popupList.MaxScroll > 0)
 		{
@@ -621,6 +829,8 @@ public partial class ThorBottomUi
 		box.SetBorderWidthAll(2);
 		box.Draw(_popup.GetCanvasItem(), p);
 		_popup.DrawRect(new Rect2(p.Position + new Vector2(16f, 24f), new Vector2(6f, 34f)), Teal);
+		DrawGlassButton(_popup, PopupPrevRect, "popup.prev", PopupNeighbour(-1) != null);
+		DrawGlassButton(_popup, PopupNextRect, "popup.next", PopupNeighbour(1) != null);
 		DrawGlassButton(_popup, PopupCloseRect, "popup.close", true);
 		if (_popupList.MaxScroll > 0)
 		{

@@ -55,7 +55,7 @@ Like every in-game page, the footer shows the current BGM title, with its level 
 
 - **Japanese original**: the Chinese patch keeps the order of the original script, so every Chinese line has its Japanese counterpart, drawn with the game's own Japanese font.
 - **Furigana**: readings come from on-device tokenizing and are written in the game's own ruby format; ruby that the original script already has is kept as is.
-- **Word lookup**: splits a Japanese line into words with reading, part of speech and meaning (Chinese Wiktionary first, JMdict English as a fallback). Works offline.
+- **Word lookup**: splits a Japanese line into words with reading, part of speech and meaning (Chinese Wiktionary first, JMdict English as a fallback). Works offline; tap a word for every gloss, and step to the previous / next line without closing.
 - **AnkiDroid word list**: one tap creates a card with the meaning and an example sentence with furigana, in a deck named "WHITE ALBUM2".
 - **System voice**: narration and lines without a recorded voice can be read aloud in Japanese with Android's text-to-speech.
 

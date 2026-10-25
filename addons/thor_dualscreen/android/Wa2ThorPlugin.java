@@ -242,53 +242,171 @@ public class Wa2ThorPlugin extends GodotPlugin {
 	}
 
 	/**
-	 * Up to three entries for a word as JSON: [{"h":head,"r":reading,"p":pos,"zh":..,"en":..}].
-	 * Entries whose reading matches the token's reading come first.
+	 * Best dictionary entries for a token as JSON, best first:
+	 * [{"h":head,"r":reading,"p":pos,"zh":..,"en":..}] (at most four).
+	 * Entries are scored on reading, part of speech, headword match and commonness, so
+	 * kana words pick the sense a reader means (いる → 居る, not 鋳る).
 	 */
 	@UsedByGodot
-	public String lookup(String surface, String base, String readingHira) {
+	public String lookup(String surface, String base, String readingHira, String posZh) {
 		android.database.sqlite.SQLiteDatabase db = dict;
 		org.json.JSONArray result = new org.json.JSONArray();
 		if (db == null) {
 			return result.toString();
 		}
-		java.util.LinkedHashMap<Long, org.json.JSONObject> found = new java.util.LinkedHashMap<>();
+		boolean kana = isKana(base);
+		String reading = !readingHira.isEmpty() ? readingHira : (kana ? hira(base) : "");
+		java.util.LinkedHashMap<Long, DictHit> found = new java.util.LinkedHashMap<>();
 		for (String key : new String[] {base, surface}) {
 			if (key == null || key.isEmpty() || key.equals("*")) {
 				continue;
 			}
 			try (android.database.Cursor c = db.rawQuery(
-					"SELECT e.id, e.head, e.reading, e.pos, e.zh, e.en FROM key k JOIN entry e ON e.id = k.id WHERE k.k = ? LIMIT 12",
+					"SELECT e.id, e.head, e.reading, e.pos, e.zh, e.en, e.rank, e.uk, e.pin FROM key k JOIN entry e ON e.id = k.id WHERE k.k = ? LIMIT 40",
 					new String[] {key})) {
 				while (c.moveToNext()) {
 					long id = c.getLong(0);
 					if (found.containsKey(id)) {
 						continue;
 					}
-					org.json.JSONObject o = new org.json.JSONObject();
-					o.put("h", c.getString(1));
-					o.put("r", c.getString(2));
-					o.put("p", c.getString(3));
-					o.put("zh", c.getString(4));
-					o.put("en", c.getString(5));
-					found.put(id, o);
+					DictHit h = new DictHit(c.getString(1), c.getString(2), c.getString(3), c.getString(4), c.getString(5));
+					double pos = posScore(posZh, h.pos);
+					h.score = pos + Math.min(c.getInt(6), 24) / 6.0;
+					if (!reading.isEmpty() && reading.equals(hira(h.reading))) {
+						h.score += 4;
+					}
+					if (h.head.equals(base)) {
+						h.score += 3;
+					} else if (h.head.equals(surface)) {
+						h.score += 2;
+					}
+					if (kana && c.getInt(7) == 1) {
+						h.score += 2;
+					}
+					if (kana && c.getInt(8) == 1 && pos > 0) {
+						h.score += 6;
+					}
+					if (!h.zh.isEmpty()) {
+						h.score += 1;
+					}
+					found.put(id, h);
 				}
 			} catch (Exception e) {
 				Log.w(TAG, "lookup failed", e);
 			}
-			if (!found.isEmpty()) {
-				break;
+		}
+		java.util.List<DictHit> list = new java.util.ArrayList<>(found.values());
+		list.sort((a, b) -> Double.compare(b.score, a.score));
+		if (!list.isEmpty()) {
+			// one source often has only half of a word: JMdict the English, zh.wiktionary the Chinese
+			DictHit top = list.get(0);
+			for (int i = 1; i < list.size() && (top.zh.isEmpty() || top.en.isEmpty()); i++) {
+				DictHit o = list.get(i);
+				if (!hira(o.reading).equals(hira(top.reading)) || posScore(top.pos, o.pos) <= 0) {
+					continue;
+				}
+				if (top.zh.isEmpty() && !o.zh.isEmpty() && o.en.isEmpty()) {
+					top.zh = o.zh;
+					list.remove(i--);
+				} else if (top.en.isEmpty() && !o.en.isEmpty() && o.zh.isEmpty()) {
+					top.en = o.en;
+					if (isKana(top.head)) {
+						top.head = o.head;
+					}
+					list.remove(i--);
+				}
 			}
 		}
-		java.util.List<org.json.JSONObject> list = new java.util.ArrayList<>(found.values());
-		list.sort((a, b) -> Boolean.compare(!readingHira.equals(a.optString("r")), !readingHira.equals(b.optString("r"))));
-		for (int i = 0; i < Math.min(3, list.size()); i++) {
-			result.put(list.get(i));
+		try {
+			for (int i = 0; i < Math.min(4, list.size()); i++) {
+				DictHit h = list.get(i);
+				org.json.JSONObject o = new org.json.JSONObject();
+				o.put("h", h.head);
+				o.put("r", h.reading);
+				o.put("p", h.pos);
+				o.put("zh", h.zh);
+				o.put("en", h.en);
+				result.put(o);
+			}
+		} catch (org.json.JSONException e) {
+			Log.w(TAG, "lookup json", e);
 		}
 		return result.toString();
 	}
 
-	/** Sentence breakdown as JSON: [{"s":surface,"r":reading,"b":base form,"p":part of speech}]. */
+	/** Whether the dictionary has this exact headword or reading (used to join compounds such as 三人). */
+	@UsedByGodot
+	public boolean hasWord(String key) {
+		android.database.sqlite.SQLiteDatabase db = dict;
+		if (db == null || key == null || key.isEmpty()) {
+			return false;
+		}
+		try (android.database.Cursor c = db.rawQuery("SELECT 1 FROM key WHERE k = ? LIMIT 1", new String[] {key})) {
+			return c.moveToNext();
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	private static final class DictHit {
+		String head, reading, pos, zh, en;
+		double score;
+
+		DictHit(String head, String reading, String pos, String zh, String en) {
+			this.head = head == null ? "" : head;
+			this.reading = reading == null ? "" : reading;
+			this.pos = pos == null ? "" : pos;
+			this.zh = zh == null ? "" : zh;
+			this.en = en == null ? "" : en;
+		}
+	}
+
+	private static final java.util.Set<String> NOUNISH = new java.util.HashSet<>(
+			java.util.Arrays.asList("名词", "代词", "数词", "专有名词"));
+	private static final java.util.Set<String> NOUN_LOOSE = new java.util.HashSet<>(
+			java.util.Arrays.asList("形容词", "副词", "量词", "后缀", "前缀", "惯用语"));
+
+	/** How well the token's part of speech agrees with an entry's: 3 same, 1.5 close, 1 unknown, 0 different. */
+	private static double posScore(String token, String entry) {
+		if (token == null || token.isEmpty() || entry == null || entry.isEmpty()) {
+			return 1;
+		}
+		if (token.equals(entry) || (NOUNISH.contains(token) && NOUNISH.contains(entry))) {
+			return 3;
+		}
+		// Kuromoji files な-adjective stems and many adverbs under 名詞
+		if ((NOUNISH.contains(token) && NOUN_LOOSE.contains(entry)) || (NOUNISH.contains(entry) && NOUN_LOOSE.contains(token))) {
+			return 1.5;
+		}
+		return 0;
+	}
+
+	private static boolean isKana(String s) {
+		if (s == null || s.isEmpty()) {
+			return false;
+		}
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c < 'ぁ' || c > 'ヿ') {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static String hira(String s) {
+		if (s == null) {
+			return "";
+		}
+		StringBuilder sb = new StringBuilder(s.length());
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			sb.append(c >= 'ァ' && c <= 'ヶ' ? (char) (c - 0x60) : c);
+		}
+		return sb.toString();
+	}
+
+	/** Sentence breakdown as JSON: [{"s":surface,"r":reading,"b":base form,"p":part of speech,"p2":its subclass}]. */
 	@UsedByGodot
 	public String analyze(String text) {
 		com.atilika.kuromoji.ipadic.Tokenizer t = tokenizer;
@@ -303,6 +421,7 @@ public class Wa2ThorPlugin extends GodotPlugin {
 				o.put("r", token.getReading() == null ? "*" : token.getReading());
 				o.put("b", token.getBaseForm() == null ? "*" : token.getBaseForm());
 				o.put("p", token.getPartOfSpeechLevel1());
+				o.put("p2", token.getPartOfSpeechLevel2());
 				result.put(o);
 			}
 		} catch (Exception e) {
@@ -418,6 +537,36 @@ public class Wa2ThorPlugin extends GodotPlugin {
 
 	// ---- furigana ------------------------------------------------------------
 
+	/** The cast's names, which IPADIC splits or misreads (雪菜 is せつな, 春希 is はるき). */
+	private static final String NAMES = String.join("\n",
+			"北原春希,北原 春希,キタハラ ハルキ,人名",
+			"小木曽雪菜,小木曽 雪菜,オギソ セツナ,人名",
+			"冬馬かずさ,冬馬 かずさ,トウマ カズサ,人名",
+			"冬馬曜子,冬馬 曜子,トウマ ヨウコ,人名",
+			"飯塚武也,飯塚 武也,イイヅカ タケヤ,人名",
+			"水沢依緒,水沢 依緒,ミズサワ イオ,人名",
+			"杉浦小春,杉浦 小春,スギウラ コハル,人名",
+			"和泉千晶,和泉 千晶,イズミ チアキ,人名",
+			"風岡麻理,風岡 麻理,カザオカ マリ,人名",
+			"小木曽孝宏,小木曽 孝宏,オギソ タカヒロ,人名",
+			"柳原朋,柳原 朋,ヤナギハラ トモ,人名",
+			"早坂親志,早坂 親志,ハヤサカ チカシ,人名",
+			"矢田美穂子,矢田 美穂子,ヤダ ミホコ,人名",
+			"春希,春希,ハルキ,人名",
+			"雪菜,雪菜,セツナ,人名",
+			"かずさ,かずさ,カズサ,人名",
+			"冬馬,冬馬,トウマ,人名",
+			"曜子,曜子,ヨウコ,人名",
+			"武也,武也,タケヤ,人名",
+			"依緒,依緒,イオ,人名",
+			"千晶,千晶,チアキ,人名",
+			"麻理,麻理,マリ,人名",
+			"孝宏,孝宏,タカヒロ,人名",
+			"親志,親志,チカシ,人名",
+			"美穂子,美穂子,ミホコ,人名",
+			"小木曽,小木曽,オギソ,人名",
+			"北原,北原,キタハラ,人名") + "\n";
+
 	private volatile com.atilika.kuromoji.ipadic.Tokenizer tokenizer;
 	private volatile boolean tokenizerLoading;
 
@@ -429,7 +578,9 @@ public class Wa2ThorPlugin extends GodotPlugin {
 			Thread loader = new Thread(() -> {
 				try {
 					long t0 = System.currentTimeMillis();
-					tokenizer = new com.atilika.kuromoji.ipadic.Tokenizer();
+					tokenizer = new com.atilika.kuromoji.ipadic.Tokenizer.Builder()
+							.userDictionary(new java.io.ByteArrayInputStream(NAMES.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+							.build();
 					Log.i(TAG, "kuromoji ready in " + (System.currentTimeMillis() - t0) + " ms");
 				} catch (Throwable e) {
 					Log.w(TAG, "kuromoji failed", e);

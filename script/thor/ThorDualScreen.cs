@@ -82,6 +82,7 @@ public partial class ThorDualScreen : Node
 		_mock = args.Contains("--thor-mock");
 		ThorBottomUi.MockJapanese = args.Contains("--thor-jp");
 		ThorBottomUi.MockWords = args.Contains("--thor-words");
+		ThorDictionary.Mock = _mock && args.Contains("--thor-popup");
 		ThorFurigana.MockReady = ThorBottomUi.MockJapanese && OS.GetName() != "Android";
 		foreach (string arg in args)
 		{
@@ -210,6 +211,10 @@ public partial class ThorDualScreen : Node
 		{
 			_ui.NextTab();
 		}
+		if (ThorDictionary.Mock)
+		{
+			_ui.MockOpenPopup();
+		}
 		if (_previewWindow != null)
 		{
 			_previewWindow.GetNode<TextureRect>("Frame").Texture = _viewport.GetTexture();
@@ -316,6 +321,13 @@ public partial class ThorDualScreen : Node
 		// B closes the lower screen's word popup first
 		if (jb.Pressed && jb.ButtonIndex == JoyButton.B && _ui != null && _ui.ClosePopup())
 		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+		// left / right in the word popup: previous / next line
+		if (jb.Pressed && _ui != null && _ui.PopupOpen && jb.ButtonIndex is JoyButton.DpadLeft or JoyButton.DpadRight)
+		{
+			_ui.PopupStep(jb.ButtonIndex == JoyButton.DpadLeft ? -1 : 1);
 			GetViewport().SetInputAsHandled();
 			return;
 		}
