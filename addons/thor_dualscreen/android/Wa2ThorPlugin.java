@@ -6,6 +6,7 @@ package org.wa2.thor;
 import android.app.Activity;
 import android.app.Presentation;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -139,10 +140,40 @@ public class Wa2ThorPlugin extends GodotPlugin {
 	/** 0 not started, 1 starting, 2 ready, -1 engine failed, -2 no Japanese voice. */
 	private volatile int ttsState;
 
+	/** The engine accepted Japanese but could not synthesize it (no offline voice and no network voice). */
+	private volatile boolean synthFailed;
+
+	/** 0 not started, 1 starting, 2 ready, -1 engine failed, -2 no Japanese, -3 last line failed to synthesize. */
 	@UsedByGodot
 	public int speechState() {
 		ensureTts();
-		return ttsState;
+		return ttsState == 2 && synthFailed ? -3 : ttsState;
+	}
+
+	/** Opens the engine's "install voice data" screen (Google: download the Japanese voice). */
+	@UsedByGodot
+	public void openSpeechInstall() {
+		Activity activity = getActivity();
+		android.speech.tts.TextToSpeech t = tts;
+		if (activity == null) {
+			return;
+		}
+		Intent intent = new Intent(android.speech.tts.TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+		if (t != null && t.getDefaultEngine() != null) {
+			intent.setPackage(t.getDefaultEngine());
+		}
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		activity.runOnUiThread(() -> {
+			try {
+				activity.startActivity(intent);
+			} catch (Exception e) {
+				try {
+					activity.startActivity(new Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+				} catch (Exception e2) {
+					Log.w(TAG, "no tts settings screen", e2);
+				}
+			}
+		});
 	}
 
 	/** A line asked for while the engine was still starting; spoken once it is ready. */
@@ -164,6 +195,33 @@ public class Wa2ThorPlugin extends GodotPlugin {
 		}
 		t.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "wa2-line");
 		return true;
+	}
+
+	/**
+	 * Prefers an installed offline Japanese voice: Google's default Japanese voice is a network
+	 * voice, which fails where Google's servers cannot be reached.
+	 */
+	private void pickOfflineVoice() {
+		try {
+			android.speech.tts.Voice best = null;
+			for (android.speech.tts.Voice v : tts.getVoices()) {
+				if (!"ja".equals(v.getLocale().getLanguage())) {
+					continue;
+				}
+				boolean missing = v.getFeatures() != null
+						&& v.getFeatures().contains(android.speech.tts.TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED);
+				Log.i(TAG, "tts voice " + v.getName() + " network=" + v.isNetworkConnectionRequired() + " missing=" + missing);
+				if (!missing && !v.isNetworkConnectionRequired() && (best == null || v.getQuality() > best.getQuality())) {
+					best = v;
+				}
+			}
+			if (best != null) {
+				tts.setVoice(best);
+				Log.i(TAG, "tts offline voice " + best.getName());
+			}
+		} catch (Exception e) {
+			Log.w(TAG, "tts voices", e);
+		}
 	}
 
 	@UsedByGodot
@@ -199,6 +257,31 @@ public class Wa2ThorPlugin extends GodotPlugin {
 				int r = tts.setLanguage(java.util.Locale.JAPAN);
 				boolean ok = r != android.speech.tts.TextToSpeech.LANG_MISSING_DATA
 						&& r != android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED;
+				if (ok) {
+					pickOfflineVoice();
+				}
+				tts.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
+					@Override
+					public void onStart(String id) {
+						synthFailed = false;
+					}
+
+					@Override
+					public void onDone(String id) {
+					}
+
+					@Override
+					@SuppressWarnings("deprecation")
+					public void onError(String id) {
+						synthFailed = true;
+					}
+
+					@Override
+					public void onError(String id, int code) {
+						synthFailed = true;
+						Log.w(TAG, "tts synthesis failed: " + code);
+					}
+				});
 				ttsState = ok ? 2 : -2;
 				Log.i(TAG, "tts engine " + tts.getDefaultEngine() + " japanese=" + r);
 				String pending = pendingSpeech;

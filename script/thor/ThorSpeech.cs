@@ -10,8 +10,11 @@ public static class ThorSpeech
 {
 	public static GodotObject Plugin;
 
-	/// <summary>2 ready, 1 starting, 0 not started, -1 engine failed, -2 no Japanese voice.</summary>
+	/// <summary>2 ready, 1 starting, 0 not started, -1 engine failed, -2 no Japanese voice, -3 the last line failed to synthesize.</summary>
 	public static int State => Plugin == null ? -1 : (int)Plugin.Call("speechState");
+
+	/// <summary>When a line was last handed to the engine (ticks, ms), to report a failed synthesis once.</summary>
+	public static ulong LastSpeak;
 
 	public static bool Speak(string scriptText)
 	{
@@ -20,7 +23,14 @@ public static class ThorSpeech
 		{
 			return false;
 		}
+		LastSpeak = Time.GetTicksMsec();
 		return (bool)Plugin.Call("speak", plain);
+	}
+
+	/// <summary>Opens the engine's voice download screen on the top screen.</summary>
+	public static void OpenInstall()
+	{
+		Plugin?.Call("openSpeechInstall");
 	}
 
 	public static void Stop()

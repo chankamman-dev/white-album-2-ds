@@ -1095,11 +1095,20 @@ public partial class ThorBottomUi : Control
 			int ttsState = ThorSpeech.State;
 			bool speechUsable = SpeechAvailable && ttsState != -1 && ttsState != -2;
 			_texts["speech"].Modulate = !speechUsable ? new Color(0.75f, 0.8f, 0.85f, 0.5f) : _speakNarration ? ActiveYellow : TextWhite;
-			SetText("speech.hint", ttsState == -2 ? "系统没有日语语音，请在系统 TTS 设置里安装"
+			bool needVoice = ttsState is -2 or -3;
+			SetText("speech.hint", needVoice ? "日语语音包未下载，点这里到上屏安装"
 				: ttsState == -1 && ThorSpeech.Plugin != null ? "系统语音引擎不可用"
 				: "无配音的句子出现时朗读日文原文");
+			_texts["speech.hint"].Modulate = needVoice ? ActiveYellow : TextWhite;
 			Vector2 sh = TextSize(_texts["speech.hint"]);
-			SetPos(_texts["speech.hint"], new Vector2(SpeechRect.End.X + 20f, SpeechRect.Position.Y + (SpeechRect.Size.Y - sh.Y) / 2f));
+			var hintPos = new Vector2(SpeechRect.End.X + 20f, SpeechRect.Position.Y + (SpeechRect.Size.Y - sh.Y) / 2f);
+			SetPos(_texts["speech.hint"], hintPos);
+			if (needVoice)
+			{
+				// Google's default Japanese voice is a network voice; the offline one has to be downloaded
+				var hintRect = new Rect2(hintPos - new Vector2(10f, 14f), sh + new Vector2(20f, 28f));
+				_hits.Add(new Hit(hintRect, "speech.install", ThorSpeech.OpenInstall, true));
+			}
 			_hits.Add(new Hit(SpeechRect.Grow(8f), "speech", () =>
 			{
 				_speakNarration = !_speakNarration;

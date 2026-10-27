@@ -55,6 +55,9 @@ public partial class ThorBottomUi
 	private bool _popupLoaded;
 	private double _popupRetry;
 
+	private ulong _speechChecked;
+	private ulong _speechWarned;
+	private double _speechPoll;
 	private string _toast = "";
 	private ulong _toastUntil;
 	private Texture2D _texLogo;
@@ -140,6 +143,25 @@ public partial class ThorBottomUi
 				_favBuilt = sig;
 				BuildFavRows();
 				Dirty = true;
+			}
+		}
+		// a line handed to the system voice a moment ago: tell the player once if it could not be spoken
+		if (ThorSpeech.LastSpeak > _speechChecked && Time.GetTicksMsec() - ThorSpeech.LastSpeak < 8000)
+		{
+			_speechPoll -= delta;
+			if (_speechPoll <= 0)
+			{
+				_speechPoll = 0.5;
+				if (ThorSpeech.State == -3)
+				{
+					_speechChecked = ThorSpeech.LastSpeak;
+					if (_speechWarned == 0 || Time.GetTicksMsec() - _speechWarned > 60000)
+					{
+						_speechWarned = Time.GetTicksMsec();
+						Toast("日语语音包未下载：到「操作说明」页点提示安装");
+					}
+					Dirty = true;
+				}
 			}
 		}
 		if (_popupOpen && !_popupLoaded)
