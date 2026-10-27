@@ -145,11 +145,21 @@ public class Wa2ThorPlugin extends GodotPlugin {
 		return ttsState;
 	}
 
+	/** A line asked for while the engine was still starting; spoken once it is ready. */
+	private volatile String pendingSpeech;
+
 	@UsedByGodot
 	public boolean speak(String text) {
 		ensureTts();
+		if (text == null || text.isEmpty()) {
+			return false;
+		}
 		android.speech.tts.TextToSpeech t = tts;
-		if (ttsState != 2 || t == null || text == null || text.isEmpty()) {
+		if (ttsState == 1) {
+			pendingSpeech = text;
+			return true;
+		}
+		if (ttsState != 2 || t == null) {
 			return false;
 		}
 		t.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "wa2-line");
@@ -158,6 +168,7 @@ public class Wa2ThorPlugin extends GodotPlugin {
 
 	@UsedByGodot
 	public void stopSpeaking() {
+		pendingSpeech = null;
 		android.speech.tts.TextToSpeech t = tts;
 		if (t != null) {
 			t.stop();
@@ -190,6 +201,11 @@ public class Wa2ThorPlugin extends GodotPlugin {
 						&& r != android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED;
 				ttsState = ok ? 2 : -2;
 				Log.i(TAG, "tts engine " + tts.getDefaultEngine() + " japanese=" + r);
+				String pending = pendingSpeech;
+				pendingSpeech = null;
+				if (ok && pending != null) {
+					tts.speak(pending, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "wa2-line");
+				}
 			});
 		});
 	}

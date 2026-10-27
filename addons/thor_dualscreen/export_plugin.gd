@@ -55,6 +55,7 @@ func _get_android_manifest_application_element_contents(platform: EditorExportPl
 	return "\t\t<meta-data android:name=\"org.godotengine.plugin.v2.Wa2Thor\" android:value=\"org.wa2.thor.Wa2ThorPlugin\" />\n"
 
 
-## AnkiDroid's provider permission and package visibility (Android 11+).
+## AnkiDroid's provider permission, and package visibility (Android 11+) for AnkiDroid and the
+## system text-to-speech engines (without the TTS_SERVICE query TextToSpeech finds no engine).
 func _get_android_manifest_element_contents(platform: EditorExportPlatform, debug: bool) -> String:
-	return "\t<uses-permission android:name=\"com.ichi2.anki.permission.READ_WRITE_DATABASE\" />\n\t<queries>\n\t\t<package android:name=\"com.ichi2.anki\" />\n\t</queries>\n"
+	return "\t<uses-permission android:name=\"com.ichi2.anki.permission.READ_WRITE_DATABASE\" />\n\t<queries>\n\t\t<package android:name=\"com.ichi2.anki\" />\n\t\t<intent>\n\t\t\t<action android:name=\"android.intent.action.TTS_SERVICE\" />\n\t\t</intent>\n\t</queries>\n"
