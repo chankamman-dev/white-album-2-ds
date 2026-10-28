@@ -340,7 +340,7 @@ public partial class ThorBottomUi
 					row.Icon = new Rect2(VoiceLeft, cy - 4f, 48f, 48f);
 					row.IconSpeech = true;
 					row.IconId = key + ".tts";
-					row.IconAct = () => ThorSpeech.Speak(item.JpText);
+					row.IconAct = () => ThorSpeech.SpeakLine(item.Script, item.TextIds, item.JpText);
 				}
 				if (!string.IsNullOrWhiteSpace(item.Name))
 				{
@@ -632,7 +632,7 @@ public partial class ThorBottomUi
 		else if (SpeechAvailable)
 		{
 			string text = _popupSentence;
-			say = () => ThorSpeech.Speak(text);
+			say = () => ThorSpeech.SpeakLine(entry.ScriptName, entry.TextIds, text);
 			row.IconSpeech = true;
 		}
 		string name = ThorJapanese.Name(entry);

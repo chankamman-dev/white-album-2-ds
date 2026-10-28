@@ -579,7 +579,7 @@ public partial class ThorBottomUi : Control
 		return new Rect2(VoiceLeft, float.IsNaN(row.VoiceY) ? row.Y - 4f : row.VoiceY, 48f, 48f);
 	}
 
-	private bool SpeechAvailable => ThorJapanese.Available && (ThorSpeech.Plugin != null || MockJapanese);
+	private bool SpeechAvailable => ThorJapanese.Available && (ThorSpeech.Plugin != null || ThorSpeech.HasNarration || MockJapanese);
 
 	private static string SpeechId(LogRow row)
 	{
@@ -608,7 +608,7 @@ public partial class ThorBottomUi : Control
 			ThorSpeech.Stop();
 			return;
 		}
-		ThorSpeech.Speak(segment);
+		ThorSpeech.SpeakLine(cur.ScriptName, new[] { cur.TextIds[count - 1] }, segment);
 	}
 
 	private static string RowId(LogRow row)
@@ -871,7 +871,7 @@ public partial class ThorBottomUi : Control
 	private static readonly string[,] HelpText =
 	{
 		{ "操作", "CONTROLS", "上屏：点击推进文本，在游戏设置里打开后长按可快进\n菜单和标题：十字键／左摇杆选择　A 确定　B 返回\n剧情中：A 推进　X 自动　Y 隐藏文本　按住 R1 快进\nL1 切换下屏页面　十字键上下 滚动文本记录\n查词时：十字键左右 上一句／下一句　B 关闭" },
-		{ "文本记录", "BACKLOG", "最新的台词在最上面，点语音图标重播语音。\n没有配音的句子显示青色图标，点击用系统语音朗读日文原文。" },
+		{ "文本记录", "BACKLOG", "最新的台词在最上面，点语音图标重播语音。\n没有配音的句子显示青色图标，点击朗读日文原文。" },
 		{ "快捷操作", "COMMAND", "存档、读档、设置、自动、快进等按钮。\n出现选项时会自动切到这一页，可以直接点选。" },
 	};
 
@@ -1016,7 +1016,8 @@ public partial class ThorBottomUi : Control
 				if (speech)
 				{
 					string text = row.Speech;
-					_hits.Add(new Hit(r, SpeechId(row), () => ThorSpeech.Speak(text), true));
+					BacklogEntry said = row.Entry;
+					_hits.Add(new Hit(r, SpeechId(row), () => ThorSpeech.SpeakLine(said.ScriptName, said.TextIds, text), true));
 					continue;
 				}
 				List<VoiceInfo> infos = row.Entry.VoiceInfos;
@@ -1093,10 +1094,12 @@ public partial class ThorBottomUi : Control
 			SetPos(_texts["speech.label"], new Vector2(70f, SpeechRect.Position.Y + (SpeechRect.Size.Y - sl.Y) / 2f));
 			CenterText("speech", SpeechRect);
 			int ttsState = ThorSpeech.State;
-			bool speechUsable = SpeechAvailable && ttsState != -1 && ttsState != -2;
+			bool narration = ThorSpeech.HasNarration;
+			bool speechUsable = SpeechAvailable && (narration || ttsState != -1 && ttsState != -2);
 			_texts["speech"].Modulate = !speechUsable ? new Color(0.75f, 0.8f, 0.85f, 0.5f) : _speakNarration ? ActiveYellow : TextWhite;
-			bool needVoice = ttsState is -2 or -3;
-			SetText("speech.hint", needVoice ? "日语语音包未下载，点这里到上屏安装"
+			bool needVoice = !narration && ttsState is -2 or -3;
+			SetText("speech.hint", narration ? "无配音的旁白用预生成的春希语音朗读"
+				: needVoice ? "日语语音包未下载，点这里到上屏安装"
 				: ttsState == -1 && ThorSpeech.Plugin != null ? "系统语音引擎不可用"
 				: "无配音的句子出现时朗读日文原文");
 			_texts["speech.hint"].Modulate = needVoice ? ActiveYellow : TextWhite;

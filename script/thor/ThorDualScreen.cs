@@ -78,6 +78,7 @@ public partial class ThorDualScreen : Node
 	{
 		Instance = this;
 		ProcessMode = ProcessModeEnum.Always;
+		ThorSpeech.Attach(this);
 		string[] args = OS.GetCmdlineArgs().Concat(OS.GetCmdlineUserArgs()).ToArray();
 		_mock = args.Contains("--thor-mock");
 		ThorBottomUi.MockJapanese = args.Contains("--thor-jp");

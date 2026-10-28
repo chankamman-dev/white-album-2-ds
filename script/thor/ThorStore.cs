@@ -12,6 +12,9 @@ public sealed class FavLine
 	public string JpName = "";
 	public string JpText = "";
 	public List<VoiceInfo> Voices = new();
+	/// <summary>Source script and string-table indices, for the narration recordings.</summary>
+	public string Script = "";
+	public int[] TextIds = System.Array.Empty<int>();
 	public long Time;
 
 	public string Key => Name + "\u0001" + Text;
@@ -52,8 +55,12 @@ public static class ThorStore
 			var f = new FavLine
 			{
 				Name = Str(d, "name"), Text = Str(d, "text"), Segment = Int(d, "segment", -1),
-				JpName = Str(d, "jpName"), JpText = Str(d, "jpText"), Time = Long(d, "time"),
+				JpName = Str(d, "jpName"), JpText = Str(d, "jpText"), Time = Long(d, "time"), Script = Str(d, "script"),
 			};
+			if (d.TryGetValue("textIds", out Variant ids))
+			{
+				f.TextIds = ids.AsInt32Array();
+			}
 			if (d.TryGetValue("voices", out Variant vs))
 			{
 				foreach (Variant v in vs.AsGodotArray())
@@ -101,6 +108,7 @@ public static class ThorStore
 			Name = e.Name ?? "", Text = e.Text ?? "", Segment = -1,
 			JpName = ThorJapanese.Name(e) ?? "", JpText = ThorJapanese.Line(e) ?? "",
 			Voices = e.VoiceInfos != null ? new List<VoiceInfo>(e.VoiceInfos) : new(),
+			Script = e.ScriptName ?? "", TextIds = e.TextIds.ToArray(),
 			Time = (long)Godot.Time.GetUnixTimeFromSystem(),
 		});
 		SaveLines();
@@ -168,7 +176,8 @@ public static class ThorStore
 			arr.Add(new Godot.Collections.Dictionary
 			{
 				{ "name", l.Name }, { "text", l.Text }, { "segment", l.Segment }, { "jpName", l.JpName },
-				{ "jpText", l.JpText }, { "voices", voices }, { "time", l.Time },
+				{ "jpText", l.JpText }, { "voices", voices }, { "script", l.Script }, { "textIds", l.TextIds },
+				{ "time", l.Time },
 			});
 		}
 		Write(LinesPath, arr);
